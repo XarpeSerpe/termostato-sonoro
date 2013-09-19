@@ -17,6 +17,7 @@ const int termo_1   = A0;
 const int speaker   = 11;
 const int rele      = 8;
 
+int i; // para el contador dentro de las interrupciones
 float temp; //temperatura actual
 volatile int filtro = 2000; //Tiempo humbral para activar una interrupcion, testa tiempo idoneo ya que el rebote depende del interruptor usado
 // Ojo al uso de millis(), a los 70 dias se reinicia, hay que capturar esta excepcion
@@ -70,6 +71,7 @@ void aumentar_temp()//interrupcion
   {
     
       temp_obj = temp_obj + 5; // esta sin mapear
+      for(i=0 ; i < 16000000; i++)
       tone(speaker, 40, 1000);
       
       
@@ -79,6 +81,7 @@ void disminuir_temp() //interrupcion
   {
     
       temp_obj = temp_obj - 5; //esta sin mapear
+      for(i=0 ; i < 16000000; i++)
       tone(speaker, 2000, 1000);
      
   }
