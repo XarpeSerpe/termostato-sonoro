@@ -71,7 +71,7 @@ void aumentar_temp()//interrupcion
   {
     
       temp_obj = temp_obj + 5; // esta sin mapear
-      for(i=0 ; i < 16000000; i++)
+      for(i=0 ; i < 2000; i++)
       tone(speaker, 40, 1000);
       
       
@@ -81,7 +81,7 @@ void disminuir_temp() //interrupcion
   {
     
       temp_obj = temp_obj - 5; //esta sin mapear
-      for(i=0 ; i < 16000000; i++)
+      for(i=0 ; i < 2000; i++)
       tone(speaker, 2000, 1000);
      
   }
