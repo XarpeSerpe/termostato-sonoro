@@ -52,7 +52,6 @@ int i; // para el contador dentro de las interrupciones
 int temp; //temperatura actual
 volatile int filtro = 2000; //Tiempo humbral para activar una interrupcion, testa tiempo idoneo ya que el rebote depende del interruptor usado
 // Ojo al uso de millis(), a los 70 dias se reinicia, hay que capturar esta excepcion
-volatile int lastInt = 0;
 volatile int temp_obj = 250.0; //temperatura objetivo aun sin mapear
 float orquilla = 5; //temperatura objetivo aun sin mapear
 
@@ -80,22 +79,24 @@ void setup()
   pinMode(sensor_out, OUTPUT);
   pinMode(sensor_input, INPUT);
   pinMode(rele,    OUTPUT);
+  pinMode(sube, INPUT);
+  pinMode(baja, INPUT);
  
-  digitalWrite(3, HIGH); //pull-up Esto elimina los rebotes?
   digitalWrite(sensor_out, LOW);
   digitalWrite(rele, LOW);
   
-  //attachInterrupt(0, aumentar_temp, RISING); // no la puedo usar pues la ocupa la shield mp3 para DREQ
   attachInterrupt(1, cambiar_temp, LOW); // uso una sola interrupcion para subida o bajada, esto implica usar finales de carrera.
 }
 
 void medir() // Compara temperatura actual con la temperatura deseada. Posiblemente se pueda mejorar para no repetir estados.
-{// esta funcion lee el voltaje, no la intensidad. Por esto se precisa que la termistor este en un divisor de corriente
+{
+  // esta funcion lee el voltaje, no la intensidad. Por esto se precisa que la termistor este en un divisor de corriente
   digitalWrite(sensor_out, HIGH);
-  temp = analogRead(sensor_input); Serial.print(temp);
+  temp = analogRead(sensor_input);
+  Serial.print(temp);
   Serial.print("   ");
   Serial.println(temp_obj);
-  if(temp < temp_obj)
+  if(temp < temp_obj + orquilla)
   {
     digitalWrite(rele, HIGH);
   }
