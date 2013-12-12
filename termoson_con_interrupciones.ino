@@ -58,13 +58,13 @@ void setup()
   
   pinMode(sensor, INPUT);
   pinMode(rele,   OUTPUT);
-  
+  pinMode(3, OUTPUT); // para activar la interrupcion
   digitalWrite(rele, LOW);
   
   MP3player.begin();
   suena("inicio.mp3");
   delay(2000); // Hay que dar tiempo a termine la reproduccion.
-  attachInterrupt(0,sube,HIGH); //La interrupcion 0 esta en el pin 2
+  //attachInterrupt(0,sube,HIGH); //La interrupcion 0 esta en el pin 2
   attachInterrupt(1,baja,HIGH); //La interrupcion 1 esta en el pin 3
 }
 
@@ -72,14 +72,14 @@ void setup()
 void loop()
 {
   medir_temp();  
-  delay(30000);
+  delay(300);
 }
 
 void medir_temp() // Compara temperatura actual con la temperatura deseada. Posiblemente se pueda mejorar para no repetir estados.
 {// esta funcion lee el voltaje, no la intensidad. Por esto se precisa que la termistor este en un divisor de corriente
   
   temp_v = analogRead(sensor);
-  temp = 21.0 / 485 * temp_v; //recalibrar esta transformacion, usar regresion lineal
+  temp = 100.0 * (5.0 / 1024.0 * temp_v + 5.0 / 1024.0); // ajuste de LM35 10mV/Cº
   Serial.print(temp);
   Serial.print(" ºC medidos");
   Serial.print("   ");
@@ -101,14 +101,14 @@ void medir_temp() // Compara temperatura actual con la temperatura deseada. Posi
 
 void suena(char trackName[])
 {
-  MP3player.playMP3(trackName, 0);
+  MP3player.playMP3(trackName);
 }
 
 void sube() //interrupcion
 {
   int i;
   
-    temp_obj = temp_obj + 0.5; // esta sin mapear
+    temp_obj = temp_obj + 0.5;
     if (temp_obj > 25.5) temp_obj = 25.0;
     for(i = 0; i <= 500; i++);// Asi tarda medio segundo en realizar el cambio
     
@@ -186,9 +186,10 @@ void sube() //interrupcion
 void baja() // Interrupcion 
 {
   int i;
-    temp_obj = temp_obj - 0.5; //esta sin mapear
+    for(i = 0; i <= 32000; i++);// Asi tarda medio segundo en realizar el cambio
+    temp_obj = temp_obj - 0.5; 
     if (temp_obj < 15.0) temp_obj = 15.0;
-    for(i = 0; i <= 500; i++);// Asi tarda medio segundo en realizar el cambio
+   
 
     
     temp_mp3 = int(temp_obj * 10);
