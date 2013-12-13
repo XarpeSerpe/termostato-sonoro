@@ -64,8 +64,8 @@ void setup()
   MP3player.begin();
   suena("inicio.mp3");
   delay(2000); // Hay que dar tiempo a termine la reproduccion.
-  //attachInterrupt(0,sube,HIGH); //La interrupcion 0 esta en el pin 2
-  attachInterrupt(1,baja,HIGH); //La interrupcion 1 esta en el pin 3
+  //attachInterrupt(0,sube,RISING); //La interrupcion 0 esta en el pin 2
+  attachInterrupt(1,baja,RISING); //La interrupcion 1 esta en el pin 3
 }
 
 
