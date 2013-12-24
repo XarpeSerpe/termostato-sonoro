@@ -4,7 +4,7 @@ Se usa una VS1053 MP3 Shield de Geeetech para informar verbalmente de la tempera
 Un LM35 mide la temperatura ambiente.
 El LM35 debe ser calibrado.
 La temperatura por defecto es 21.0 ºC.
-La temperatura deseada se selecciona con dos sensores capacitivos que la subiran o bajaran a tramos de medio grado.
+La temperatura deseada se selecciona con un potenciometro.
 La temperatura deseada se anuncia con la reproduccion del fichero mp3 adecuado.
 Evita conexiones y desconexiones rapidas del rele espaciandolas 30 segundos.
 Para el acceso al fichero mp3 se usa la libreria  SdFat y SdFatUtil desarrolladas por William Greiman
@@ -32,9 +32,9 @@ CapacitiveSensor sube = CapacitiveSensor(2,4);
 CapacitiveSensor baja = CapacitiveSensor(2,0);
 */
 
-const int sensor = A0;// lee el la caida de voltaje en la termoresistencia.
-const int rele   = 19;// A5 control del rele que activa o desactiva la caldera.
-
+const int sensor = 17;//A3 lee el la caida de voltaje en la termoresistencia.
+const int rele   = A0;// control del rele que activa o desactiva la caldera.
+const int potenciometro = A5; //regulador de temperatura.
 /*
 Cambiar por interrupciones.
 En la Shield MP3 el pin 2 controla el DREG, la derivo al pin 0 de Arduino.
