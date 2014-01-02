@@ -35,12 +35,13 @@ const int potenciometro = A5; //regulador de temperatura.
 const int boton = 3; //Si el boton esta pulsado entonces informa de la temperatura actual.
 
 int temp_v; //la "temperatura" medida por el lm35 en el A0
-float temp; //temperatura actual
-volatile float temp_obj = 5.0; // Temperatura objetivo al iniciar el sistema
+int temp; //temperatura actual
+int temp_obj = 5.0; // Temperatura objetivo al iniciar el sistema
 int temp_mp3;
 int pot_old = 0;
 int pot_now;
-
+unsigned long time;
+unsigned long time_old = 0;
 
 void setup()
 {
@@ -64,13 +65,27 @@ void setup()
 
 void loop()
 {
-  medir_temp();  
-  seleccion();
- // temperatura();
-  delay(300);
+	time = millis();
+  	if(time-time_old >= 30000)
+	{
+		medir_temp();
+		time_old = time;
+	}
+	seleccion();
+	if(boton == HIGH)
+		{
+			String name;
+			char fichero[10];
+			temp = medir_temp();
+			name = String(temp);
+			name += ".mp3";
+			strcpy(fichero, name.c_str());
+			MP3player.playMP3(fichero);
+		}
+	
 }
 
-void medir_temp() // Compara temperatura actual con la temperatura deseada. Posiblemente se pueda mejorar para no repetir estados.
+float medir_temp() // Compara temperatura actual con la temperatura deseada. Posiblemente se pueda mejorar para no repetir estados.
 {  
   temp_v = analogRead(sensor);
   temp = 100.0 * (5.0 / 1024.0 * temp_v + 5.0 / 1024.0); // ajuste de LM35 10mV/Cº
@@ -82,6 +97,7 @@ void medir_temp() // Compara temperatura actual con la temperatura deseada. Posi
   {
     digitalWrite(rele, LOW);
   }
+return temp;
 }
 
 void seleccion()
@@ -96,6 +112,5 @@ if (pot_old != pot_now)
         strcpy(fichero, name.c_str());
 	MP3player.playMP3(fichero);
    }
-
 pot_old = pot_now;
 }
