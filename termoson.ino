@@ -29,10 +29,11 @@ SdFat sd;
 //Inicializa la Shield MP3
 SFEMP3Shield MP3player;
 
-const int sensor = 17;//A3 lee el la caida de voltaje en la termoresistencia.
+const int sensor = A3;// lee el la caida de voltaje en el lm35
 const int rele   = A0;// control del rele que activa o desactiva la caldera.
-const int potenciometro = A5; //regulador de temperatura.
+const int potenciometro = A5; // regulador de temperatura.
 const int boton = 3; //Si el boton esta pulsado entonces informa de la temperatura actual.
+const int alimentar_boton = 12;
 
 int temp_v; //la "temperatura" medida por el lm35 en el A0
 int temp; //temperatura actual
@@ -45,44 +46,39 @@ unsigned long time_old = 0;
 
 void setup()
 {
- 
-  //Initialize the SdCard.
-  if(!sd.begin(SD_SEL, SPI_HALF_SPEED)) sd.initErrorHalt();
-  if(!sd.chdir("/")) sd.errorHalt("sd.chdir");
+  	//attachInterrupt(1, info, RISING);
+  	Serial.begin(9600);//debug
 
-  //Initialize the circuit.
-  pinMode(sensor, INPUT);
-  pinMode(rele,   OUTPUT);
-  pinMode(boton, INPUT);
-  digitalWrite(rele, LOW);
+  	//Initialize the SdCard.
+  	if(!sd.begin(SD_SEL, SPI_HALF_SPEED)) sd.initErrorHalt();
+  	if(!sd.chdir("/")) sd.errorHalt("sd.chdir");
 
-  //Initialize the MP3 Player Shield
-  MP3player.begin();
-  MP3player.playMP3("inicio.mp3");
-  delay(2000); // Hay que dar tiempo a termine la reproduccion.
+  	//Initialize the circuit.
+  	pinMode(sensor, INPUT);
+  	pinMode(rele,   OUTPUT);
+  	pinMode(boton, INPUT);
+  	pinMode(alimentar_boton, OUTPUT);
+  	digitalWrite(rele, LOW);
+	pinMode(alimentar_boton, HIGH);
+
+  	//Initialize the MP3 Player Shield
+  	MP3player.begin();
+  	MP3player.playMP3("inicio.mp3");
+  	delay(2000); // Hay que dar tiempo a termine la reproduccion.
 }
 
 
 void loop()
 {
 	time = millis();
-  	if(time-time_old >= 30000)
+  	if(time-time_old >= 3000) //cambiar a 30000 tras el debug
 	{
-		medir_temp();
+		temp = medir_temp();
 		time_old = time;
+                Serial.print("Temperatura ambiente "); //debug
+		Serial.println(temp);//debug
 	}
-	seleccion();
-	if(boton == HIGH)
-		{
-			String name;
-			char fichero[10];
-			temp = medir_temp();
-			name = String(temp);
-			name += ".mp3";
-			strcpy(fichero, name.c_str());
-			MP3player.playMP3(fichero);
-		}
-	
+	temp_obj = seleccion();
 }
 
 float medir_temp() // Compara temperatura actual con la temperatura deseada. Posiblemente se pueda mejorar para no repetir estados.
@@ -100,17 +96,41 @@ float medir_temp() // Compara temperatura actual con la temperatura deseada. Pos
 return temp;
 }
 
-void seleccion()
+int seleccion()
 {
 String name;
 char fichero[10];
-pot_now= map(analogRead(potenciometro), 0, 1023, 0, 30);// calibrar el 0-1023 segun potenciometro
-if (pot_old != pot_now)
+int sum_pot = 0;
+
+for(int i = 0; i < 1000 ; i++)
+{ 
+pot_now = map(analogRead(potenciometro), 960, 1007, 0, 30);// Recalibrar
+sum_pot += pot_now;
+}
+pot_now = sum_pot/1000;
+
+if (pot_old != pot_now)//ojo a la inducción del termostato, medir cuando se apaga e impedir que se ejecute el seleccion
    {
+	Serial.print(" Temperatura objetivo ");
+	Serial.print(pot_now);
 	name = String(pot_now);
 	name += ".mp3";
         strcpy(fichero, name.c_str());
 	MP3player.playMP3(fichero);
+	delay(2000);
    }
 pot_old = pot_now;
+return pot_now;
+}
+
+void info()
+{
+	String name;
+	char fichero[10];
+	temp = medir_temp();
+	name = String(temp);
+	name += ".mp3";
+	strcpy(fichero, name.c_str());
+	MP3player.playMP3(fichero);
+        Serial.println("Boton pulsado");//debug
 }
