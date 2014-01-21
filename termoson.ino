@@ -32,7 +32,7 @@ SFEMP3Shield MP3player;
 
 const int sensor = A0;// lee el la caida de voltaje en el lm35
 const int rele   = 10;// control del rele que activa o desactiva la caldera.
-const int potenciometro = A5; // regulador de temperatura.
+const int potenciometro = A3; // regulador de temperatura.
 const int boton = 3; //Si el boton esta pulsado entonces informa de la temperatura actual.
 /* problemas de alimentación del potenciometro, cuando cae la resistencia, cae el potencial del LM35*/
 
