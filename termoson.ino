@@ -18,6 +18,7 @@ Botón de consulta de temperatura
 #include <SdFatUtil.h>
 #include <SFEMP3Shield.h>
 
+
 /* Below is not needed if interrupt driven. Safe to remove if not using.
 #if defined(USE_MP3_REFILL_MEANS) && USE_MP3_REFILL_MEANS == USE_MP3_Timer1
   #include <TimerOne.h>
@@ -39,14 +40,14 @@ const int boton = 3; //Si el boton esta pulsado entonces informa de la temperatu
 int temp_v; //la "temperatura" medida por el lm35 en el A0
 int temp; //temperatura actual
 int temp_obj = 5.0; // Temperatura objetivo al iniciar el sistema
-int pot_old = 0;
+int pot_old;
 int pot_now;
 unsigned long time;
-unsigned long time_old = 0;
+unsigned long time_old;
 
 void setup()
 {
-  	attachInterrupt(1, info, RISING);
+  	//attachInterrupt(1, info, RISING);
   	Serial.begin(9600);//debug
 
   	//Initialize the SdCard.
@@ -59,15 +60,17 @@ void setup()
   	pinMode(boton, INPUT);
   	pinMode(potenciometro, INPUT);
         digitalWrite(rele, LOW);
-
-       
+        pot_old = read_pot(); // Toma un potencial inicial de referencia.
+        time_old = millis();
     		
     //Initialize the MP3 Player Shield
   	MP3player.begin();
   	MP3player.playMP3("inicio.mp3");
   	delay(2000); // Hay que dar tiempo a termine la reproduccion.
+        Serial.println("*******");//debug
+        Serial.println("* 0.1 *");//debug
+        Serial.println("*******");//debug
 }
-
 
 void loop()
 {
@@ -85,13 +88,13 @@ void loop()
 int medir_temp() // Compara temperatura actual con la temperatura deseada. Posiblemente se pueda mejorar para no repetir estados.
 {
  long sum_temp = 0.0; 
- for (int i = 0; i < 100; i++)
+ for (int i = 0; i < 200; i++)
   { 
     temp_v = analogRead(sensor);
     temp = 100.0 * (5.0 / 1024.0 * temp_v + 5.0 / 1024.0); // ajuste de LM35 10mV/Cº
     sum_temp += temp;
   }
-  temp = sum_temp/100;
+  temp = sum_temp/200;
   if(temp < temp_obj)
   {
     digitalWrite(rele, HIGH);
@@ -107,18 +110,16 @@ int seleccion()//ahora puede cambiar sin avisar
 {
   String name;
   char fichero[10];
-  long sum_pot = 0;
-
-  for(int i = 0; i < 100 ; i++)
-  { 
-    pot_now = map(analogRead(potenciometro), 0, 1023, 0, 31);
-    sum_pot += pot_now;
-  }
-  
-  pot_now = sum_pot/100;
-  
+  pot_now = read_pot();  
   if (pot_old != pot_now)//ojo a la inducción del termostato, medir cuando se apaga e impedir que se ejecute el seleccion
   {
+    do
+    {
+     pot_old = pot_now; 
+     pot_now = read_pot();
+    }
+    while(pot_old != pot_now);
+    
     Serial.print("Temperatura objetivo ");
     Serial.println(pot_now);
     name = String(pot_now);
@@ -127,11 +128,20 @@ int seleccion()//ahora puede cambiar sin avisar
     MP3player.playMP3(fichero);// hay que añadir la interrupcion de pista.
     delay(2000);
    }
-   
-  pot_old = pot_now;
   return pot_old;
 }
 
+int read_pot()
+{
+ long sum_pot = 0;
+ for(int i = 0; i < 200 ; i++)
+  { 
+    pot_now = map(analogRead(potenciometro), 0, 1023, 1, 30);
+    sum_pot += pot_now;
+  }
+  
+  return sum_pot/200;
+} 
 void info()
 {
 	String name;
