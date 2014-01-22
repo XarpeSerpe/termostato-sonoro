@@ -47,7 +47,7 @@ unsigned long time_old;
 
 void setup()
 {
-  	//attachInterrupt(1, info, RISING);
+  	
   	Serial.begin(9600);//debug
 
   	//Initialize the SdCard.
@@ -55,6 +55,7 @@ void setup()
   	if(!sd.chdir("/")) sd.errorHalt("sd.chdir");
 
   	//Initialize the circuit.
+        pinMode(boton, INPUT); //asignar entrada para la interrupcion
   	pinMode(sensor, INPUT);
   	pinMode(rele,   OUTPUT);
   	pinMode(boton, INPUT);
@@ -70,6 +71,7 @@ void setup()
         Serial.println("*******");//debug
         Serial.println("* 0.1 *");//debug
         Serial.println("*******");//debug
+        attachInterrupt(1, info, LOW);//Boton
 }
 
 void loop()
@@ -151,5 +153,6 @@ void info()
 	name += ".mp3";
 	strcpy(fichero, name.c_str());
 	MP3player.playMP3(fichero);
-        Serial.println("Boton pulsado");//debug
+        delay(2000);
+        //debug Serial.println("Boton pulsado");
 }
