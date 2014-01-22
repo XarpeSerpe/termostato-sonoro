@@ -69,7 +69,7 @@ void setup()
   	MP3player.playMP3("inicio.mp3");
   	delay(2000); // Hay que dar tiempo a termine la reproduccion.
         Serial.println("*******");//debug
-        Serial.println("* 0.1 *");//debug
+        Serial.println("* 0.3 *");//debug
         Serial.println("*******");//debug
         attachInterrupt(1, info, LOW);//Boton
 }
@@ -77,7 +77,7 @@ void setup()
 void loop()
 {
 	time = millis();
-  	if(time-time_old >= 1000) //cambiar a 30000 tras el debug
+  	if(time-time_old >= 2000) //cambiar a 30000 tras el debug
 	{
 		temp = medir_temp();
 		time_old = time;
@@ -128,7 +128,7 @@ int seleccion()//ahora puede cambiar sin avisar
     name += ".mp3";
     strcpy(fichero, name.c_str());
     MP3player.playMP3(fichero);// hay que añadir la interrupcion de pista.
-    delay(2000);
+    delay(5000);
    }
   return pot_old;
 }
