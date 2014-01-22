@@ -1,85 +1,102 @@
 /*
 Se usa un Arduino Uno R3 para controlar la temperatura de una habitacion.
 Se usa una VS1053 MP3 Shield de Geeetech para informar verbalmente de la temperatura seleccionada.
-La media de temperatura se realiza con un divisor de tension hecho una termoresistencia y una resistencia.
-La termoresistencia debe ser calibrada.
-La temperatura por defecto es 20.0 ºC.
-La temperatura deseada se selecciona con dos sensores capacitivos que la subiran o bajaran a tramos de medio grado.
+Un LM35 mide la temperatura ambiente.
+La temperatura objetivo por defecto es 5.0 ºC.
+La temperatura deseada se selecciona con un potenciometro.
 La temperatura deseada se anuncia con la reproduccion del fichero mp3 adecuado.
 Evita conexiones y desconexiones rapidas del rele espaciandolas 30 segundos.
-Para el acceso al fichero mp3 se usa la libreria  SdFat y SdFatUtil desarrolladas por XXX.
+Para el acceso al fichero mp3 se usa la libreria  SdFat y SdFatUtil desarrolladas por William Greiman
 Para reproducir el fichero mp3 se usa la libreria SFEMP3Shield desarrollada por Bill Porter y Michael P. Flaga.
  */
+/*To Do
+Botón de consulta de temperatura
+*/
 
 #include <SPI.h>
 #include <SdFat.h>
 #include <SdFatUtil.h>
 #include <SFEMP3Shield.h>
+
+
 /* Below is not needed if interrupt driven. Safe to remove if not using.
 #if defined(USE_MP3_REFILL_MEANS) && USE_MP3_REFILL_MEANS == USE_MP3_Timer1
   #include <TimerOne.h>
 #elif defined(USE_MP3_REFILL_MEANS) && USE_MP3_REFILL_MEANS == USE_MP3_SimpleTimer
   #include <SimpleTimer.h>
 #endif*/
-#include <CapacitiveSensor.h>
 
-//Inicializa la tarjeta SD
+//Inicializa el acceso a tarjeta SD
 SdFat sd;
-//Inicializa la Shield MP3
+//Inicializa el acceso a Shield MP3
 SFEMP3Shield MP3player;
 
-CapacitiveSensor sube = CapacitiveSensor(2,4);
-CapacitiveSensor baja = CapacitiveSensor(2,0);
+const int sensor = A0;// lee el la caida de voltaje en el lm35
+const int rele   = 10;// control del rele que activa o desactiva la caldera.
+const int potenciometro = A3; // regulador de temperatura.
+const int boton = 3; //Si el boton esta pulsado entonces informa de la temperatura actual.
+/* problemas de alimentación del potenciometro, cuando cae la resistencia, cae el potencial del LM35*/
 
-const int sensor = A0;// lee el la caida de voltaje en la termoresistencia.
-const int rele   = 19;// A5 control del rele que activa o desactiva la caldera.
-/*
-Cambiar por interrupciones.
-En la Shield MP3 el pin 2 controla el DREG, la derivo al pin 0 de Arduino.
-Esto precisa cambiar el uso del pin 2 de Arduino al pin 0 de Arduino bien en la libreria SDFAT bien en la de MP3, estudiar esto
-const int sensor_subir = 3;//Derivacion de la interrupcion para subida de temperatura.
-const int sensor_bajar = 2;//Derivacion de la interrupcion para bajada de temperatura.
-
-*/
 int temp_v; //la "temperatura" medida por el lm35 en el A0
-float temp; //temperatura actual
-volatile int temp_obj = 21; //temperatura objetivo aun sin mapear
-float orquilla = 5; //temperatura objetivo aun sin mapear
+int temp; //temperatura actual
+int temp_obj = 5.0; // Temperatura objetivo al iniciar el sistema
+int pot_old;
+int pot_now;
+unsigned long time;
+unsigned long time_old;
 
 void setup()
 {
-  Serial.begin(115200);
-  //Initialize the SdCard.
-  if(!sd.begin(SD_SEL, SPI_HALF_SPEED)) sd.initErrorHalt();
-  if(!sd.chdir("/")) sd.errorHalt("sd.chdir");
-  //Initialize the MP3 Player Shield
-  
-  pinMode(sensor, INPUT);
-  pinMode(rele,   OUTPUT);
-  
-  digitalWrite(rele, LOW);
-  
-  MP3player.begin();
-  suena("inicio.mp3");
-  delay(2000); // Hay que dar tiempo a termine la reproduccion.
-  
-}
+  	
+  	Serial.begin(9600);//debug
 
+  	//Initialize the SdCard.
+  	if(!sd.begin(SD_SEL, SPI_HALF_SPEED)) sd.initErrorHalt();
+  	if(!sd.chdir("/")) sd.errorHalt("sd.chdir");
+
+  	//Initialize the circuit.
+        pinMode(boton, INPUT); //asignar entrada para la interrupcion
+  	pinMode(sensor, INPUT);
+  	pinMode(rele,   OUTPUT);
+  	pinMode(boton, INPUT);
+  	pinMode(potenciometro, INPUT);
+        digitalWrite(rele, LOW);
+        pot_old = read_pot(); // Toma un potencial inicial de referencia.
+        time_old = millis();
+    		
+    //Initialize the MP3 Player Shield
+  	MP3player.begin();
+  	MP3player.playMP3("inicio.mp3");
+  	delay(2000); // Hay que dar tiempo a termine la reproduccion.
+        Serial.println("*******");//debug
+        Serial.println("* 0.4 *");//debug
+        Serial.println("*******");//debug
+        attachInterrupt(1, info, LOW);//Boton
+}
 
 void loop()
 {
-  medir_temp();  
-  sensor_capacitivo();  
+	time = millis();
+  	if(time-time_old >= 2000) //cambiar a 30000 tras el debug
+	{
+		temp = medir_temp();
+		time_old = time;
+                Serial.print("Temperatura ambiente "); //debug
+		Serial.println(temp);//debug
+	}
+	temp_obj = seleccion();
 }
 
-void medir_temp() // Compara temperatura actual con la temperatura deseada. Posiblemente se pueda mejorar para no repetir estados.
-{// esta funcion lee el voltaje, no la intensidad. Por esto se precisa que la termistor este en un divisor de corriente
-  
-  temp_v = analogRead(sensor);
-  temp = 20.0 / 500.0 * temp_v; //recalibrar esta transformacion, usar regresion lineal
-  Serial.print(temp);
-  Serial.print("   ");
-  Serial.println(temp_obj);
+int medir_temp() // Compara temperatura actual con la temperatura deseada. Posiblemente se pueda mejorar para no repetir estados.
+{
+ long sum_temp = 0.0; 
+ for (int i = 0; i < 200; i++)
+  { 
+    temp_v = analogRead(sensor);
+    temp = 100.0 * (5.0 / 1024.0 * temp_v + 5.0 / 1024.0); // ajuste de LM35 10mV/Cº
+    sum_temp += temp;
+  }
+  temp = sum_temp/200;
   if(temp < temp_obj)
   {
     digitalWrite(rele, HIGH);
@@ -88,171 +105,63 @@ void medir_temp() // Compara temperatura actual con la temperatura deseada. Posi
   {
     digitalWrite(rele, LOW);
   }
+return temp;
 }
 
-void suena(char trackName[])
+int seleccion()//ahora puede cambiar sin avisar
 {
-  MP3player.playMP3(trackName, 0);
-}
-
-void sensor_capacitivo() //interrupcion
-{
-  long tiempo_sube;
-  long tiempo_baja;
+  int time_wait; // tiempo de espera de cada fichero, asi cuando cae la potencia en el arduino no medimos nada
+  String name;
+  char fichero[10];
+  pot_now = read_pot();  
+  if (pot_old != pot_now)//ojo a la inducción del termostato, medir cuando se apaga e impedir que se ejecute el seleccion
+  {
+    do
+    {
+     pot_old = pot_now; 
+     pot_now = read_pot();
+    }
+    while(pot_old != pot_now);
     
-  tiempo_sube = sube.capacitiveSensor(30);
-  tiempo_baja = baja.capacitiveSensor(30);
-  
-  if(tiempo_sube > 500 && tiempo_baja < 500) // estos valores deben ser testados
-  {
-    temp_obj = temp_obj + 5; // esta sin mapear
-    if (temp_obj > 255) temp_obj = 250;
-
-    switch(temp_obj)
-    {
-      case 150:
-        suena("150.mp3");  
-      break;
-      case 155:
-        suena("155.mp3" );  
-      break;
-      case 160:
-        suena("160.mp3" );  
-      break;
-      case 165:
-        suena("165.mp3" );  
-      break;
-      case 170:
-        suena("170.mp3" );  
-      break;
-      case 175:
-        suena("175.mp3" );  
-      break;
-      case 180:
-        suena("180.mp3" );  
-      break;
-      case 185:
-        suena("185.mp3" );  
-      break;
-      case 190:
-        suena("190.mp3" );  
-      break;
-      case 195:
-        suena("195.mp3" );  
-      break;
-      case 200:
-        suena("200.mp3" );  
-      break;
-      case 205:
-        suena("205.mp3" );  
-      break;
-      case 210:
-        suena("210.mp3" );  
-      break;
-      case 215:
-        suena("215.mp3" );  
-      break;
-      case 220:
-        suena("220.mp3" );  
-      break;
-      case 225:
-        suena("225.mp3" );  
-      break;
-      case 230:
-        suena("230.mp3" );  
-      break;
-      case 235:
-        suena("235.mp3" );  
-      break;
-      case 240:
-        suena("240.mp3" );  
-      break;
-      case 245:
-        suena("245.mp3" );  
-      break;
-      case 250:
-        suena("250.mp3" );  
-      break;
-    }
-  }
-  else if(tiempo_sube < 500 && tiempo_baja > 500)
-  {
-    temp_obj = temp_obj - 5; //esta sin mapear
-    if (temp_obj < 150) temp_obj = 150;
-    switch(temp_obj)
-    {
-      case 150:
-        suena("150.mp3" );  
-      break;
-      case 155:
-        suena("155.mp3" );  
-      break;
-      case 160:
-        suena("160.mp3" );  
-      break;
-      case 165:
-        suena("165.mp3" );  
-      break;
-      case 170:
-        suena("170.mp3" );  
-      break;
-      case 175:
-        suena("175.mp3" );  
-      break;
-      case 180:
-        suena("180.mp3" );  
-      break;
-      case 185:
-        suena("185.mp3" );  
-      break;
-      case 190:
-        suena("190.mp3" );  
-      break;
-      case 195:
-        suena("195.mp3" );  
-      break;
-      case 200:
-        suena("200.mp3" );  
-      break;
-      case 205:
-        suena("205.mp3" );  
-      break;
-      case 210:
-        suena("210.mp3" );  
-      break;
-      case 215:
-        suena("215.mp3" );  
-      break;
-      case 220:
-        suena("220.mp3" );  
-      break;
-      case 225:
-        suena("225.mp3" );  
-      break;
-      case 230:
-        suena("230.mp3" );  
-      break;
-      case 235:
-        suena("235.mp3" );  
-      break;
-      case 240:
-        suena("240.mp3" );  
-      break;
-      case 245:
-        suena("245.mp3" );  
-      break;
-      case 250:
-        suena("250.mp3" );  
-      break;
-    }
-  }
-  else if(tiempo_sube > 500 && tiempo_baja > 500)
-  {
-    suena("error.mp3");
-  }
-  else
-  {
-    delay(1);
-  }
+    Serial.print("Temperatura objetivo ");
+    Serial.println(pot_now);
+    name = String(pot_now);
+    if (name == "11" || name == "13")
+    { time_wait = 4000; }
+    else if (name == "8" || name == "15")
+    { time_wait = 3000; }
+    else if (name == "22" || name == "30")
+    { time_wait = 5000; }
+    else
+    { time_wait = 1000; }
+    name += ".mp3";
+    strcpy(fichero, name.c_str());
+    MP3player.playMP3(fichero);// hay que añadir la interrupcion de pista.
+    delay(time_wait);
+   }
+  return pot_old;
 }
+
+int read_pot()
+{
+ long sum_pot = 0;
+ for(int i = 0; i < 200 ; i++)
+  { 
+    pot_now = map(analogRead(potenciometro), 0, 1023, 1, 30);
+    sum_pot += pot_now;
+  }
   
+  return sum_pot/200;
+} 
+void info()
+{
+	String name;
+	char fichero[10];
+	temp = medir_temp();
+	name = String(temp);
+	name += ".mp3";
+	strcpy(fichero, name.c_str());
+	MP3player.playMP3(fichero);
+        delay(2000);
+        //debug Serial.println("Boton pulsado");
+}
