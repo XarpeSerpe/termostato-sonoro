@@ -9,22 +9,11 @@ Evita conexiones y desconexiones rapidas del rele espaciandolas 30 segundos.
 Para el acceso al fichero mp3 se usa la libreria  SdFat y SdFatUtil desarrolladas por William Greiman
 Para reproducir el fichero mp3 se usa la libreria SFEMP3Shield desarrollada por Bill Porter y Michael P. Flaga.
  */
-/*To Do
-Botón de consulta de temperatura
-*/
 
 #include <SPI.h>
 #include <SdFat.h>
 #include <SdFatUtil.h>
 #include <SFEMP3Shield.h>
-
-
-/* Below is not needed if interrupt driven. Safe to remove if not using.
-#if defined(USE_MP3_REFILL_MEANS) && USE_MP3_REFILL_MEANS == USE_MP3_Timer1
-  #include <TimerOne.h>
-#elif defined(USE_MP3_REFILL_MEANS) && USE_MP3_REFILL_MEANS == USE_MP3_SimpleTimer
-  #include <SimpleTimer.h>
-#endif*/
 
 //Inicializa el acceso a tarjeta SD
 SdFat sd;
@@ -35,7 +24,6 @@ const int sensor = A0;// lee el la caida de voltaje en el lm35
 const int rele   = 10;// control del rele que activa o desactiva la caldera.
 const int potenciometro = A3; // regulador de temperatura.
 const int boton = 3; //Si el boton esta pulsado entonces informa de la temperatura actual.
-/* problemas de alimentación del potenciometro, cuando cae la resistencia, cae el potencial del LM35*/
 
 int temp_v; //la "temperatura" medida por el lm35 en el A0
 int temp; //temperatura actual
@@ -47,7 +35,6 @@ unsigned long time_old;
 
 void setup()
 {
-  	
   	Serial.begin(9600);//debug
 
   	//Initialize the SdCard.
@@ -67,9 +54,9 @@ void setup()
     //Initialize the MP3 Player Shield
   	MP3player.begin();
   	MP3player.playMP3("inicio.mp3");
-  	delay(2000); // Hay que dar tiempo a termine la reproduccion.
+  	delay(2500); // Hay que dar tiempo a termine la reproduccion.
         Serial.println("*******");//debug
-        Serial.println("* 0.3 *");//debug
+        Serial.println("* 0.4 *");//debug
         Serial.println("*******");//debug
         attachInterrupt(1, info, LOW);//Boton
 }
@@ -110,6 +97,7 @@ return temp;
 
 int seleccion()//ahora puede cambiar sin avisar
 {
+  int time_wait; // tiempo de espera de cada fichero, asi cuando cae la potencia en el arduino no medimos nada
   String name;
   char fichero[10];
   pot_now = read_pot();  
@@ -125,6 +113,14 @@ int seleccion()//ahora puede cambiar sin avisar
     Serial.print("Temperatura objetivo ");
     Serial.println(pot_now);
     name = String(pot_now);
+    if (name == "11" || name == "13")
+    { time_wait = 4000; }
+    else if (name == "8" || name == "15")
+    { time_wait = 3000; }
+    else if (name == "22" || name == "30")
+    { time_wait = 5000; }
+    else
+    { time_wait = 1000; }
     name += ".mp3";
     strcpy(fichero, name.c_str());
     MP3player.playMP3(fichero);// hay que añadir la interrupcion de pista.
@@ -146,13 +142,22 @@ int read_pot()
 } 
 void info()
 {
+        int time_wait; // tiempo de espera de cada fichero, asi cuando cae la potencia en el arduino no medimos nada
 	String name;
 	char fichero[10];
 	temp = medir_temp();
 	name = String(temp);
+        if (name == "11" || name == "13")
+        { time_wait = 4000; }
+        else if (name == "8" || name == "15")
+        { time_wait = 3000; }
+        else if (name == "22" || name == "30")
+        { time_wait = 5000; }
+        else
+        { time_wait = 1000; }
 	name += ".mp3";
 	strcpy(fichero, name.c_str());
 	MP3player.playMP3(fichero);
-        delay(2000);
+        delay(time_wait);
         //debug Serial.println("Boton pulsado");
 }
