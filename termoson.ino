@@ -8,6 +8,7 @@ La temperatura deseada se anuncia con la reproduccion del fichero mp3 adecuado.
 Evita conexiones y desconexiones rapidas del rele espaciandolas 30 segundos.
 Para el acceso al fichero mp3 se usa la libreria  SdFat y SdFatUtil desarrolladas por William Greiman
 Para reproducir el fichero mp3 se usa la libreria SFEMP3Shield desarrollada por Bill Porter y Michael P. Flaga.
+El LM35 precisa 25 micro sengundos para comenzar a medir bien.
  */
 
 #include <SPI.h>
