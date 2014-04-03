@@ -46,7 +46,6 @@ void setup()
         pinMode(boton, INPUT); //asignar entrada para la interrupcion
   	pinMode(sensor, INPUT);
   	pinMode(rele,   OUTPUT);
-  	pinMode(boton, INPUT);
   	pinMode(potenciometro, INPUT);
         digitalWrite(rele, LOW);
         pot_old = read_pot(); // Toma un potencial inicial de referencia.
