@@ -36,27 +36,29 @@ unsigned long time_old;
 
 void setup()
 {
-  	Serial.begin(9600);//debug
-
-  	//Initialize the SdCard.
-  	if(!sd.begin(SD_SEL, SPI_HALF_SPEED)) sd.initErrorHalt();
-  	if(!sd.chdir("/")) sd.errorHalt("sd.chdir");
-
   	//Initialize the circuit.
-        pinMode(boton, INPUT); //asignar entrada para la interrupcion
-  	pinMode(sensor, INPUT);
-  	pinMode(rele,   OUTPUT);
-  	pinMode(potenciometro, INPUT);
+        //pinMode(boton, INPUT); //asignar entrada para la interrupcion
+        pinMode(rele,   OUTPUT);	
         digitalWrite(rele, LOW);
+        pinMode(sensor, INPUT);
+  	pinMode(potenciometro, INPUT);
+
         pot_old = read_pot(); // Toma un potencial inicial de referencia.
         time_old = millis();
     		
+        //Initialize the SdCard.
+  	if(!sd.begin(SD_SEL, SPI_HALF_SPEED)) sd.initErrorHalt();
+  	if(!sd.chdir("/")) sd.errorHalt("sd.chdir");
+
+  	
     //Initialize the MP3 Player Shield
   	MP3player.begin();
   	MP3player.playMP3("inicio.mp3");
   	delay(2500); // Hay que dar tiempo a termine la reproduccion.
+
+        Serial.begin(9600);//debug
         Serial.println("*******");//debug
-        Serial.println("* 0.4 *");//debug
+        Serial.println("* 0.5 *");//debug
         Serial.println("*******");//debug
         attachInterrupt(1, info, LOW);//Boton
 }
@@ -124,7 +126,7 @@ int seleccion()//ahora puede cambiar sin avisar
     name += ".mp3";
     strcpy(fichero, name.c_str());
     MP3player.playMP3(fichero);// hay que añadir la interrupcion de pista.
-    delay(5000);
+    delay(time_wait);
    }
   return pot_old;
 }
