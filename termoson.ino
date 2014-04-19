@@ -1,14 +1,14 @@
 /*
 Se usa un Arduino Uno R3 para controlar la temperatura de una habitacion.
-Se usa una VS1053 MP3 Shield de Geeetech para informar verbalmente de la temperatura seleccionada.
-Un LM35 mide la temperatura ambiente.
+Se usa una VS1053 MP3 Shield de Geeetech para informar verbalmente de la temperatura ambiente y de la temperatura objetivo seleccionada.
+La tamperatura ambiente es medida por una termoresistencia previamente calibrada con un LM35.
 La temperatura objetivo por defecto es 5.0 ºC.
 La temperatura deseada se selecciona con un potenciometro.
 La temperatura deseada se anuncia con la reproduccion del fichero mp3 adecuado.
-Evita conexiones y desconexiones rapidas del rele espaciandolas 30 segundos.
+Evita conexiones y desconexiones rapidas del rele espaciandolas 120 segundos.
 Para el acceso al fichero mp3 se usa la libreria  SdFat y SdFatUtil desarrolladas por William Greiman
 Para reproducir el fichero mp3 se usa la libreria SFEMP3Shield desarrollada por Bill Porter y Michael P. Flaga.
-El LM35 precisa 25 micro sengundos para comenzar a medir bien.
+Se le dara corriente al sensor termico solo 3 segundos para estar estacionario, se promedia la medida.
  */
 
 #include <SPI.h>
@@ -21,67 +21,78 @@ SdFat sd;
 //Inicializa el acceso a Shield MP3
 SFEMP3Shield MP3player;
 
-const int sensor = A0;// lee el la caida de voltaje en el lm35
+const int sensor = A0;// lee el la caida de voltaje en la termoresistencia
+const int power  = 0;// alimenta a la termoresistencia.
 const int rele   = 10;// control del rele que activa o desactiva la caldera.
 const int potenciometro = A3; // regulador de temperatura.
-const int boton = 3; //Si el boton esta pulsado entonces informa de la temperatura actual.
+const int boton = 3; // si el boton esta pulsado entonces informa de la temperatura actual.
 
-int temp_v; //la "temperatura" medida por el lm35 en el A0
-int temp; //temperatura actual
-int temp_obj = 5.0; // Temperatura objetivo al iniciar el sistema
-int pot_old;
-int pot_now;
+int temp_v; // el voltaje que cae en la termoresistencia
+int temp; // temperatura actual
+int temp_obj = 5.0; // temperatura objetivo al iniciar el sistema
+int pot_old; // viejo valor del potenciometro
+int pot_now; // valor actual del potenciometro.
 unsigned long time;
 unsigned long time_old;
 
 void setup()
 {
-  	//Initialize the circuit.
-        //pinMode(boton, INPUT); //asignar entrada para la interrupcion
-        pinMode(rele,   OUTPUT);	
-        digitalWrite(rele, LOW);
-        pinMode(sensor, INPUT);
-  	pinMode(potenciometro, INPUT);
-
-        pot_old = read_pot(); // Toma un potencial inicial de referencia.
-        time_old = millis();
-    		
-        //Initialize the SdCard.
+        attachInterrupt(1, info, LOW);//Boton	
+  
+  	//Initialize the SdCard.
   	if(!sd.begin(SD_SEL, SPI_HALF_SPEED)) sd.initErrorHalt();
   	if(!sd.chdir("/")) sd.errorHalt("sd.chdir");
 
-  	
-    //Initialize the MP3 Player Shield
+  	//Initialize the circuit.
+        pinMode(boton, INPUT); 
+  	pinMode(sensor, INPUT);
+  	pinMode(rele,   OUTPUT);
+        digitalWrite(rele, LOW);	
+        pinMode(boton, INPUT);
+  	pinMode(potenciometro, INPUT);
+        pinMode(power, OUTPUT);
+        
+        pot_old = read_pot(); // Toma un potencial inicial de referencia.
+        time_old = millis();
+    		
+        //Initialize the MP3 Player Shield
   	MP3player.begin();
+        //union twobyte mp3_vol;
+        //mp3_vol.word = MP3player.GetVolume();
+        //MP3player.SetVolume(160,160);
   	MP3player.playMP3("inicio.mp3");
   	delay(2500); // Hay que dar tiempo a termine la reproduccion.
 
-        Serial.begin(9600);//debug
+        Serial.begin(115200);// debug
         Serial.println("*******");//debug
-        Serial.println("* 0.5 *");//debug
+        Serial.println("* 0.6 *");//debug
         Serial.println("*******");//debug
-        attachInterrupt(1, info, LOW);//Boton
+        
 }
 
 void loop()
 {
-	time = millis();
-  	if(time-time_old >= 2000) //cambiar a 30000 tras el debug
+	
+        time = millis();
+  	if(time-time_old >= 2000) //cambiar a 60000 tras el debug
 	{
 		temp = medir_temp();
 		time_old = time;
+
                 Serial.print("Temperatura ambiente "); //debug
 		Serial.println(temp);//debug
 	}
 	temp_obj = seleccion();
 }
 
-int medir_temp() // Compara temperatura actual con la temperatura deseada. Posiblemente se pueda mejorar para no repetir estados.
+int medir_temp() // Compara temperatura actual con la temperatura deseada.
 {
+ digitalWrite(power, HIGH);
+ delay(200);
  long sum_temp = 0.0; 
  for (int i = 0; i < 200; i++)
   { 
-    temp_v = analogRead(sensor);
+    temp_v = -30.8853*analogRead(sensor)+0.445424; // transformar termoresistencia en escala de LM35 R-squared: 0.980266
     temp = 100.0 * (5.0 / 1024.0 * temp_v + 5.0 / 1024.0); // ajuste de LM35 10mV/Cº
     sum_temp += temp;
   }
@@ -94,16 +105,17 @@ int medir_temp() // Compara temperatura actual con la temperatura deseada. Posib
   {
     digitalWrite(rele, LOW);
   }
+digitalWrite(power, LOW);
 return temp;
 }
 
-int seleccion()//ahora puede cambiar sin avisar
+int seleccion()
 {
-  int time_wait; // tiempo de espera de cada fichero, asi cuando cae la potencia en el arduino no medimos nada
+  int time_wait; // tiempo de cada fichero.
   String name;
   char fichero[10];
   pot_now = read_pot();  
-  if (pot_old != pot_now)//ojo a la inducción del termostato, medir cuando se apaga e impedir que se ejecute el seleccion
+  if (pot_old != pot_now)
   {
     do
     {
@@ -112,8 +124,9 @@ int seleccion()//ahora puede cambiar sin avisar
     }
     while(pot_old != pot_now);
     
-    Serial.print("Temperatura objetivo ");
-    Serial.println(pot_now);
+    Serial.print("Temperatura objetivo "); // debug
+    Serial.println(pot_now); // debug
+    
     name = String(pot_now);
     if (name == "11" || name == "13")
     { time_wait = 4000; }
@@ -125,8 +138,9 @@ int seleccion()//ahora puede cambiar sin avisar
     { time_wait = 1000; }
     name += ".mp3";
     strcpy(fichero, name.c_str());
-    MP3player.playMP3(fichero);// hay que añadir la interrupcion de pista.
+    MP3player.playMP3(fichero);
     delay(time_wait);
+    medir_temp();
    }
   return pot_old;
 }
@@ -136,7 +150,7 @@ int read_pot()
  long sum_pot = 0;
  for(int i = 0; i < 200 ; i++)
   { 
-    pot_now = map(analogRead(potenciometro), 0, 1023, 1, 30);
+    pot_now = map(analogRead(potenciometro), 470, 1023, 1, 30);// ajustar
     sum_pot += pot_now;
   }
   
@@ -144,7 +158,7 @@ int read_pot()
 } 
 void info()
 {
-        int time_wait; // tiempo de espera de cada fichero, asi cuando cae la potencia en el arduino no medimos nada
+        int time_wait; 
 	String name;
 	char fichero[10];
 	temp = medir_temp();
