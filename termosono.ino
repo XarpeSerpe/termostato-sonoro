@@ -23,6 +23,7 @@ SFEMP3Shield MP3player;
 
 const int sensor = A0;// lee el la caida de voltaje en la termoresistencia
 const int power  = A5;// alimenta a la termoresistencia.
+const int power2 = A4; // alimenta al potenciometro y al rele el 5V parece tocado
 const int rele   = 10;// control del rele que activa o desactiva la caldera.
 const int potenciometro = A2; // regulador de temperatura.
 const int boton = 3; // si el boton esta pulsado entonces informa de la temperatura actual.
@@ -37,7 +38,7 @@ unsigned long time_old;
 
 void setup()
 {
-        attachInterrupt(1, info, LOW);//Boton	
+        //attachInterrupt(1, info, LOW);//Boton	
   
   	//Initialize the SdCard.
   	if(!sd.begin(SD_SEL, SPI_HALF_SPEED)) sd.initErrorHalt();
@@ -50,7 +51,9 @@ void setup()
         // pinMode(boton, INPUT);
   	pinMode(potenciometro, INPUT);
         pinMode(power, OUTPUT);
-        
+        pinMode(power2, OUTPUT);
+        digitalWrite(power2, HIGH);
+        delay(200);
         pot_old = read_pot(); // Toma un potencial inicial de referencia.
         time_old = millis();
     		
@@ -61,26 +64,26 @@ void setup()
         //MP3player.SetVolume(160,160);
   	MP3player.playMP3("inicio.mp3");
   	delay(2500); // Hay que dar tiempo a termine la reproduccion.
-/*
+
         Serial.begin(115200);// debug
         Serial.println("*******");//debug
         Serial.println("* 0.6 *");//debug
         Serial.println("*******");//debug
-*/  
+  
 }
 
 void loop()
 {
 	
         time = millis();
-  	if(time-time_old >= 60000) //cambiar a 60000 tras el debug
+  	if(time-time_old >= 2000) //cambiar a 60000 tras el debug
 	{
 		temp = medir_temp();
 		time_old = time;
-/*
+
                 Serial.print("Temperatura ambiente "); //debug
 		Serial.println(temp);//debug
-*/
+
 	}
 	temp_obj = seleccion();
 }
@@ -123,10 +126,10 @@ int seleccion()
      pot_now = read_pot();
     }
     while(pot_old != pot_now);
-/*    
+    
     Serial.print("Temperatura objetivo "); // debug
     Serial.println(pot_now); // debug
-*/    
+    
     name = String(pot_now);
     if (name == "11" || name == "13")
     { time_wait = 4000; }
