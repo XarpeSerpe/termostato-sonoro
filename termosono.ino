@@ -23,7 +23,8 @@ SFEMP3Shield MP3player;
 
 const int sensor = A0;// lee el la caida de voltaje en la termoresistencia
 const int power  = A5;// alimenta a la termoresistencia.
-const int power2 = A4; // alimenta al potenciometro y al rele el 5V parece tocado
+const int power2 = A4;// alimenta al potenciometro y al rele el 5V parece tocado
+const int power3 = 5; // alimenta a la interrupcion de boton.
 const int rele   = 10;// control del rele que activa o desactiva la caldera.
 const int potenciometro = A2; // regulador de temperatura.
 const int boton = 3; // si el boton esta pulsado entonces informa de la temperatura actual.
