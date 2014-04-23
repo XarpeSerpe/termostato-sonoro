@@ -49,11 +49,12 @@ void setup()
        	pinMode(sensor, INPUT);
   	pinMode(rele,   OUTPUT);
         digitalWrite(rele, LOW);	
-        // pinMode(boton, INPUT);
-  	pinMode(potenciometro, INPUT);
+        pinMode(potenciometro, INPUT);
         pinMode(power, OUTPUT);
         pinMode(power2, OUTPUT);
+        pinMode(power3, OUTPUT);
         digitalWrite(power2, HIGH);
+        digitalWrite(power3, HIGH);
         delay(200);
         pot_old = read_pot(); // Toma un potencial inicial de referencia.
         time_old = millis();
