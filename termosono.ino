@@ -64,7 +64,7 @@ void setup()
   	MP3player.begin();
         //union twobyte mp3_vol;
         //mp3_vol.word = MP3player.GetVolume();
-        //MP3player.SetVolume(160,160);
+        MP3player.SetVolume(0x0000);
   	MP3player.playMP3("inicio.mp3");
   	delay(2500); // Hay que dar tiempo a termine la reproduccion.
 
