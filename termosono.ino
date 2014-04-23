@@ -39,7 +39,7 @@ unsigned long time_old;
 
 void setup()
 {
-        //attachInterrupt(1, info, LOW);//Boton	
+        	
   
   	//Initialize the SdCard.
   	if(!sd.begin(SD_SEL, SPI_HALF_SPEED)) sd.initErrorHalt();
@@ -55,6 +55,7 @@ void setup()
         pinMode(power3, OUTPUT);
         digitalWrite(power2, HIGH);
         digitalWrite(power3, HIGH);
+        pinMode(boton, INPUT);
         delay(200);
         pot_old = read_pot(); // Toma un potencial inicial de referencia.
         time_old = millis();
@@ -71,7 +72,8 @@ void setup()
         Serial.println("*******");//debug
         Serial.println("* 0.6 *");//debug
         Serial.println("*******");//debug
-  
+        
+        attachInterrupt(1, info, LOW);//Boton
 }
 
 void loop()
