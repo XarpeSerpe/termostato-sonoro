@@ -1,3 +1,6 @@
+//Sin terminar
+
+
 alto = 10;
 radio_exterior = 15;
 radio_interior = 4;
